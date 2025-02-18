@@ -43,8 +43,7 @@ async def test_store_interaction(postgres_memory):
     query = "test query"
     response = "test response"
     context = {"test_key": "test_value"}
-    # Convertir lista a string de array PostgreSQL
-    embedding = f"[{','.join(['0.1'] * 1536)}]"
+    embedding = [0.1] * 1536  # Vector numérico en lugar de string
     
     # Store interaction
     await postgres_memory.store_interaction(query, response, context, embedding)
@@ -57,28 +56,76 @@ async def test_store_interaction(postgres_memory):
         assert row['context'] == json.dumps(context)
 
 @pytest.mark.asyncio
-async def test_retrieve_context(postgres_memory):
-    """Test retrieving context."""
+async def test_retrieve_context_with_embedding(postgres_memory):
+    """Test retrieving context with embedding vector."""
     # Test data
     query = "test query"
     response = "test response"
     context = {"test_key": "test_value"}
-    embedding = f"[{','.join(['0.1'] * 1536)}]"
+    embedding = [0.1] * 1536  # Vector de 1536 dimensiones
     
+    # Store interaction
     await postgres_memory.store_interaction(query, response, context, embedding)
     
-    # Test retrieval
+    # Test retrieval with embedding
     result = await postgres_memory.retrieve_context("test", embedding)
     
     assert result["source"] == "postgres"
+    assert result["search_type"] == "vector"
+    assert result["total_found"] > 0
     assert len(result["recent_interactions"]) > 0
-    assert result["recent_interactions"][0]["query"] == query
+    
+    interaction = result["recent_interactions"][0]
+    assert interaction["query"] == query
+    assert interaction["response"] == response
+    assert interaction["context"] == context
+    assert "similarity" in interaction
+    assert isinstance(interaction["timestamp"], str)
+
+@pytest.mark.asyncio
+async def test_retrieve_context_without_embedding(postgres_memory):
+    """Test retrieving context without embedding vector."""
+    # Test data
+    query = "test query"
+    response = "test response"
+    context = {"test_key": "test_value"}
+    
+    # Store interaction without embedding
+    await postgres_memory.store_interaction(query, response, context)
+    
+    # Test retrieval without embedding
+    result = await postgres_memory.retrieve_context("test")
+    
+    assert result["source"] == "postgres"
+    assert result["search_type"] == "recent"
+    assert result["total_found"] > 0
+    assert len(result["recent_interactions"]) > 0
+    
+    interaction = result["recent_interactions"][0]
+    assert interaction["query"] == query
+    assert interaction["response"] == response
+    assert interaction["context"] == context
+    assert "similarity" not in interaction
+    assert isinstance(interaction["timestamp"], str)
+
+@pytest.mark.asyncio
+async def test_store_interaction_error_handling(postgres_memory):
+    """Test error handling in store_interaction."""
+    # Intentar almacenar con un embedding inválido
+    with pytest.raises(ValueError) as exc_info:
+        await postgres_memory.store_interaction(
+            "test query",
+            "test response",
+            {"test": True},
+            "invalid_embedding"  # Esto debería causar un error
+        )
+    assert "Error storing interaction" in str(exc_info.value)
 
 @pytest.mark.asyncio
 async def test_clear(postgres_memory):
     """Test clearing memory."""
     # Store something first
-    embedding = f"[{','.join(['0.1'] * 1536)}]"
+    embedding = [0.1] * 1536  # Vector numérico en lugar de string
     await postgres_memory.store_interaction(
         "test", "test", {"test": True}, embedding
     )

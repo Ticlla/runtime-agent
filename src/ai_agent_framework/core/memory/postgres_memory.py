@@ -57,53 +57,105 @@ class PostgresMemory(BaseMemory):
         context: Optional[Dict] = None,
         embedding: Optional[List[float]] = None
     ) -> None:
-        """Store an interaction in the database."""
+        """
+        Store an interaction in the database.
+        
+        Args:
+            query: The user's query
+            response: The system's response
+            context: Optional context dictionary
+            embedding: Optional embedding vector
+        """
         async with self.pool.acquire() as conn:
-            await conn.execute(
-                f'''
-                INSERT INTO {self.table_name} 
-                (query, response, context, embedding) 
-                VALUES ($1, $2, $3, $4)
-                ''',
-                query,
-                response,
-                json.dumps(context) if context else None,
-                embedding
-            )
+            try:
+                # Convertir el embedding a formato array de PostgreSQL
+                embedding_str = f"[{','.join(map(str, embedding))}]" if embedding else None
+                
+                await conn.execute(
+                    f'''
+                    INSERT INTO {self.table_name}
+                    (query, response, context, embedding)
+                    VALUES ($1, $2, $3, $4)
+                    ''',
+                    query,
+                    response,
+                    json.dumps(context) if context else None,
+                    embedding_str
+                )
+            except Exception as e:
+                # Log error and raise a more specific exception
+                error_msg = f"Error storing interaction: {str(e)}"
+                # TODO: Add proper logging
+                print(error_msg)  # Temporary logging
+                raise ValueError(error_msg)
     
     async def retrieve_context(
         self,
         query: str,
-        embedding: str,
+        embedding: Optional[List[float]] = None,
         limit: int = 5
     ) -> Dict[str, Any]:
-        """Retrieve relevant context based on query and embedding."""
+        """
+        Retrieve relevant context based on query and embedding.
+        
+        Args:
+            query: The current query
+            embedding: Optional embedding vector for similarity search
+            limit: Maximum number of interactions to retrieve
+            
+        Returns:
+            Dict containing recent interactions and source information
+        """
         async with self.pool.acquire() as conn:
-            rows = await conn.fetch(
-                f'''
-                SELECT 
-                    query, 
-                    response, 
-                    context,
-                    timestamp
-                FROM {self.table_name}
-                ORDER BY embedding <-> $1
-                LIMIT $2
-                ''',
-                embedding, limit
-            )
+            if embedding:
+                # Convertir el embedding a formato array de PostgreSQL
+                embedding_str = f"[{','.join(map(str, embedding))}]"
+                rows = await conn.fetch(
+                    f'''
+                    SELECT 
+                        query, 
+                        response, 
+                        context,
+                        timestamp,
+                        1 - (embedding <-> $1::vector) as similarity
+                    FROM {self.table_name}
+                    ORDER BY embedding <-> $1::vector
+                    LIMIT $2
+                    ''',
+                    embedding_str,
+                    limit
+                )
+            else:
+                rows = await conn.fetch(
+                    f'''
+                    SELECT 
+                        query, 
+                        response, 
+                        context,
+                        timestamp
+                    FROM {self.table_name}
+                    ORDER BY timestamp DESC
+                    LIMIT $1
+                    ''',
+                    limit
+                )
             
             interactions = []
             for row in rows:
-                interactions.append({
+                interaction = {
                     "query": row['query'],
                     "response": row['response'],
                     "context": json.loads(row['context']) if row['context'] else {},
-                    "timestamp": row['timestamp'].timestamp() if row['timestamp'] else None
-                })
+                    "timestamp": row['timestamp'].isoformat()
+                }
+                if embedding:
+                    interaction["similarity"] = float(row['similarity'])
+                interactions.append(interaction)
             
             return {
                 "source": "postgres",
+                "search_type": "vector" if embedding else "recent",
+                "total_found": len(interactions),
                 "recent_interactions": interactions
             }
     
