@@ -1,5 +1,5 @@
 from typing import Dict, Any
-from .memory import Memory
+from .memory import BaseMemory
 from .model import BaseModel
 from .tools import Tools
 
@@ -16,7 +16,7 @@ class Orchestration:
         self,
         query: str,
         context: Dict[str, Any],
-        memory: Memory,
+        memory: BaseMemory,
         model: BaseModel,
         tools: Tools
     ) -> str:

@@ -2,7 +2,8 @@
 Memory system implementations.
 """
 
-from .base import BaseMemory as Memory  # Alias BaseMemory as Memory for backwards compatibility
+from .base import BaseMemory
 from .redis_memory import RedisMemory
+from .postgres_memory import PostgresMemory
 
-__all__ = ['Memory', 'RedisMemory'] 
+__all__ = ['BaseMemory', 'RedisMemory', 'PostgresMemory'] 

@@ -24,12 +24,12 @@ class RedisMemory(BaseMemory):
         self.redis_url = redis_url
         self.namespace = namespace
         self.ttl = ttl
-        self.redis: Optional[aioredis.Redis] = None
+        self.redis = None
     
-    async def connect(self) -> None:
-        """Establish Redis connection."""
+    async def initialize(self) -> None:
+        """Initialize Redis connection."""
         if not self.redis:
-            self.redis = aioredis.from_url(
+            self.redis = await aioredis.from_url(
                 self.redis_url,
                 encoding="utf-8",
                 decode_responses=True
@@ -39,15 +39,18 @@ class RedisMemory(BaseMemory):
         self,
         query: str,
         response: str,
-        context: Dict[str, Any]
+        context: Dict[str, Any],
+        embedding: Optional[str] = None
     ) -> None:
         """Store an interaction in Redis."""
-        await self.connect()
+        if not self.redis:
+            await self.initialize()
             
         interaction = {
             "query": query,
             "response": response,
             "context": context,
+            "embedding": embedding,
             "timestamp": time.time()
         }
         
@@ -64,10 +67,12 @@ class RedisMemory(BaseMemory):
     async def retrieve_context(
         self,
         query: str,
+        embedding: Optional[str] = None,
         limit: int = 5
     ) -> Dict[str, Any]:
         """Retrieve recent interactions from Redis."""
-        await self.connect()
+        if not self.redis:
+            await self.initialize()
             
         key = f"{self.namespace}:interactions"
         
@@ -86,13 +91,16 @@ class RedisMemory(BaseMemory):
             context_data.append(interaction)
         
         return {
-            "recent_interactions": context_data,
-            "source": "redis"
+            "source": "redis",
+            "search_type": "recent",
+            "total_found": len(context_data),
+            "recent_interactions": context_data
         }
     
     async def clear(self) -> None:
         """Clear all memory entries."""
-        await self.connect()
+        if not self.redis:
+            await self.initialize()
         await self.redis.delete(f"{self.namespace}:interactions")
     
     async def close(self) -> None:
