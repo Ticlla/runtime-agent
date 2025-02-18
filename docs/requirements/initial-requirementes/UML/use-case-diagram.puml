@@ -1,0 +1,31 @@
+@startuml AI Agent System Use Cases
+
+title AI Agent System - Use Case Diagram
+
+actor Usuario
+actor Administrador
+rectangle AI_Agent_System {
+  Usuario --> (Enviar Consulta)
+  (Enviar Consulta) --> (Procesar Consulta)
+  (Procesar Consulta) --> (Generar Respuesta)
+  (Generar Respuesta) --> (Recibir Respuesta)
+  (Recibir Respuesta) --> Usuario
+  
+  Administrador --> (Configurar Agente)
+  (Configurar Agente) .> (Definir Perfiles) : <<include>>
+  (Configurar Agente) .> (Gestionar Memoria) : <<include>>
+  (Configurar Agente) .> (Configurar Modelos) : <<include>>
+  (Configurar Agente) --> AI_Agent_System
+  
+  note right of (Procesar Consulta)
+    Incluye análisis de contexto
+    y selección de modelo
+  end note
+  
+  note right of (Configurar Agente)
+    Gestión de perfiles,
+    memoria y modelos de IA
+  end note
+}
+
+@enduml 

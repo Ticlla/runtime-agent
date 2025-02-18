@@ -1,0 +1,67 @@
+@startuml AI Agent System Class Diagram
+
+title AI Agent System - Class Diagram
+
+class AgentRuntime {
+  +orchestrate()
+  +process_query()
+}
+
+class Orchestration {
+  +manage_goals()
+  +manage_memory()
+}
+
+class Memory {
+  +short_term
+  +long_term
+  +store()
+  +retrieve()
+}
+
+class Model {
+  +generate_response()
+  +process_context()
+  +manage_tokens()
+}
+
+class Tools {
+  +external_APIs
+  +plugins
+  +execute_tool()
+  +register_plugin()
+}
+
+class User {
+  +send_query()
+  +receive_response()
+}
+
+class Administrator {
+  +configure_agent()
+  +manage_profiles()
+}
+
+User --> AgentRuntime : interacts
+Administrator --> AgentRuntime : configures
+AgentRuntime --> Orchestration : manages
+Orchestration --> Memory : accesses
+AgentRuntime --> Model : uses
+AgentRuntime --> Tools : integrates
+
+note right of Memory
+  Handles both short-term context
+  and long-term knowledge storage
+end note
+
+note right of Model
+  Manages AI model interactions
+  and response generation
+end note
+
+note right of Tools
+  Provides extensibility through
+  plugins and external APIs
+end note
+
+@enduml 

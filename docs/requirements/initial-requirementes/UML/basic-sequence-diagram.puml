@@ -1,0 +1,33 @@
+@startuml AI Agent Basic Sequence
+
+title AI Agent System - Basic Sequence Diagram
+
+actor Usuario
+participant AgentRuntime
+participant Orchestration
+participant Memory
+participant Model
+
+Usuario ->> AgentRuntime: send_query()
+activate AgentRuntime
+
+AgentRuntime ->> Orchestration: process_query()
+activate Orchestration
+
+Orchestration ->> Memory: retrieve_context()
+activate Memory
+Memory -->> Orchestration: return_context()
+deactivate Memory
+
+Orchestration ->> Model: generate_response()
+activate Model
+Model -->> Orchestration: return_response()
+deactivate Model
+
+Orchestration -->> AgentRuntime: send_response()
+deactivate Orchestration
+
+AgentRuntime -->> Usuario: return_response()
+deactivate AgentRuntime
+
+@enduml 

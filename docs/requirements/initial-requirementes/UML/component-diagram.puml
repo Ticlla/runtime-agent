@@ -1,0 +1,52 @@
+@startuml AI Agent Component Diagram
+
+title AI Agent System - Component Diagram
+
+package "AI Agent System" {
+    [UserInterface] as UI
+    [AgentRuntime]
+    [Orchestration]
+    [Memory]
+    [Model]
+    [Tools]
+
+    interface "HTTP/WebSocket" as HTTP
+    interface "Internal API" as API
+    interface "Memory Interface" as MemIF
+    interface "Model Interface" as ModelIF
+    interface "Tools Interface" as ToolsIF
+
+    UI -- HTTP
+    HTTP -- AgentRuntime : send_query()
+
+    AgentRuntime -- API
+    API -- Orchestration : orchestrate_process()
+
+    Orchestration -- MemIF
+    MemIF -- Memory : retrieve & store data
+
+    Orchestration -- ModelIF
+    ModelIF -- Model : invoke AI model
+
+    Orchestration -- ToolsIF
+    ToolsIF -- Tools : use external APIs
+
+    AgentRuntime --> UI : return_response()
+}
+
+note right of Memory
+  Handles both short-term and
+  long-term storage
+end note
+
+note right of Model
+  Manages AI model interactions
+  and inference
+end note
+
+note right of Tools
+  External APIs and
+  plugin system
+end note
+
+@enduml 
