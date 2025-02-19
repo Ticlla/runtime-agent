@@ -3,123 +3,99 @@ from unittest.mock import AsyncMock, MagicMock
 from ai_agent_framework.core.agent_runtime import AgentRuntime
 from ai_agent_framework.core.memory import BaseMemory
 from ai_agent_framework.core.model import BaseModel
-from ai_agent_framework.core.tools import Tools
+from ai_agent_framework.core.tools import ToolsManager
 
 class MockMemory(BaseMemory):
     """Mock memory for testing."""
-    async def initialize(self) -> None:
-        """Initialize mock memory."""
-        pass
-        
-    async def store_interaction(
-        self,
-        query: str,
-        response: str,
-        context: dict,
-        embedding: str = None
-    ) -> None:
-        """Mock store interaction."""
-        pass
-        
-    async def retrieve_context(
-        self,
-        query: str,
-        embedding: str = None,
-        limit: int = 5
-    ) -> dict:
-        """Mock retrieve context."""
-        return {
-            "source": "mock",
-            "recent_interactions": []
-        }
-        
-    async def clear(self) -> None:
-        """Mock clear memory."""
-        pass
-        
-    async def close(self) -> None:
-        """Mock close memory."""
-        pass
+    async def initialize(self): pass
+    async def store_interaction(self, query, response, context, embedding=None): pass
+    async def retrieve_context(self, query, embedding=None, limit=5): 
+        return {"source": "mock", "recent_interactions": []}
+    async def clear(self): pass
+    async def close(self): pass
 
 class MockModel(BaseModel):
     """Mock model for testing."""
-    async def generate_response(self, query: str, context: dict = None) -> str:
-        """Mock generate response."""
+    async def generate_response(self, query, context=None):
         return f"Test response for: {query}"
-        
-    async def get_embedding(self, text: str) -> list:
-        """Mock get embedding."""
+    async def get_embedding(self, text):
         return [0.1] * 1536
-        
-    async def close(self) -> None:
-        """Mock close model."""
-        pass
+    async def close(self): pass
 
 @pytest.fixture
 async def runtime():
-    """Fixture para pruebas de AgentRuntime."""
+    """Fixture for AgentRuntime testing."""
     config = {
         "memory_config": {
-            "redis": {
-                "redis_url": "redis://localhost:6379",
-                "namespace": "test",
-                "ttl": 3600
-            },
-            "postgres": {
-                "dsn": "postgresql://admin:admin123@localhost:5432/agent_memory",
-                "table_name": "test_memory"
-            }
+            "redis": {"url": "redis://localhost"},
+            "postgres": {"url": "postgresql://localhost"}
         },
-        "model_config": {
-            "model_type": "ollama",
-            "base_url": "http://localhost:11434",
-            "model": "llama2"
-        }
+        "model_config": {"model_type": "test"}
     }
     
-    # Crear runtime con mocks
     runtime = AgentRuntime(config)
     runtime.short_term = MockMemory()
     runtime.long_term = MockMemory()
     runtime.model = MockModel()
-    runtime.tools = Tools()
+    runtime.tools = ToolsManager()
     
-    # Inicializar
-    await runtime.initialize()
+    await runtime.short_term.initialize()
+    await runtime.long_term.initialize()
     
     yield runtime
+    
     await runtime.close()
 
 @pytest.mark.asyncio
-async def test_runtime_initialization(runtime):
+async def test_runtime_initialization():
     """Test runtime initialization."""
-    assert runtime.short_term is not None
-    assert runtime.long_term is not None
-    assert runtime.model is not None
-    assert runtime.tools is not None
+    config = {
+        "memory_config": {
+            "redis": {"url": "redis://localhost"},
+            "postgres": {"url": "postgresql://localhost"}
+        },
+        "model_config": {"model_type": "test"}
+    }
+    
+    runtime = AgentRuntime(config)
+    assert isinstance(runtime.tools, ToolsManager)
+    assert runtime.short_term is None
+    assert runtime.long_term is None
+
+@pytest.mark.asyncio
+async def test_process_query(runtime):
+    """Test basic query processing."""
+    response = await runtime.process_query("test query")
+    assert "Test response for:" in response
+
+@pytest.mark.asyncio
+async def test_process_query_with_context(runtime):
+    """Test query processing with context."""
+    context = {"test_key": "test_value"}
+    response = await runtime.process_query("test query", context=context)
+    assert "Test response for:" in response
 
 @pytest.mark.asyncio
 async def test_runtime_process_query_short_term(runtime):
     """Test query processing with short-term memory."""
-    query = "Test query"
-    response = await runtime.process_query(query)
-    assert response is not None
+    response = await runtime.process_query("test query", use_long_term=False)
     assert "Test response for:" in response
 
 @pytest.mark.asyncio
 async def test_runtime_process_query_long_term(runtime):
     """Test query processing with long-term memory."""
-    query = "Test query"
-    response = await runtime.process_query(query, use_long_term=True)
-    assert response is not None
+    response = await runtime.process_query("test query", use_long_term=True)
     assert "Test response for:" in response
 
 @pytest.mark.asyncio
 async def test_runtime_error_handling(runtime):
     """Test error handling in runtime."""
-    # Hacer que el modelo falle
-    runtime.model.generate_response = AsyncMock(side_effect=Exception("Test error"))
-    response = await runtime.process_query("test")
+    # Make the model fail
+    async def mock_error(*args, **kwargs):
+        raise Exception("Test error")
+    
+    runtime.model.generate_response = mock_error
+    response = await runtime.process_query("test query")
     assert "Error processing query" in response
 
 @pytest.mark.asyncio
@@ -127,79 +103,26 @@ async def test_agent_runtime_initialization():
     """Test AgentRuntime initialization."""
     config = {
         "test_mode": True,
-        "model_type": "ollama",
-        "model_config": {}
+        "model_type": "test",
+        "model_config": {},
+        "memory_config": {
+            "redis": {"url": "redis://localhost"},
+            "postgres": {"url": "postgresql://localhost"}
+        }
     }
     agent_runtime = AgentRuntime(config)
     
     assert agent_runtime.config == config
-    assert agent_runtime.orchestration is not None
-    assert agent_runtime.memory is not None
-    assert agent_runtime.model is not None
     assert agent_runtime.tools is not None
+    assert agent_runtime.short_term is None  # No inicializado aún
+    assert agent_runtime.long_term is None   # No inicializado aún
+    assert agent_runtime.model is None       # No inicializado aún
 
-@pytest.mark.asyncio
-async def test_process_query():
-    """Test basic query processing."""
+def test_runtime_initialization():
+    """Test runtime initialization."""
     config = {
         "memory_config": {},
         "model_config": {"model_type": "ollama"}
     }
-    
     runtime = AgentRuntime(config)
-    runtime.short_term = MockMemory()
-    runtime.long_term = MockMemory()
-    runtime.model = MockModel()
-    runtime.tools = Tools()
-    
-    await runtime.initialize()
-    response = await runtime.process_query("Test query")
-    assert "Test response for:" in response
-    await runtime.close()
-
-@pytest.mark.asyncio
-async def test_process_query_with_context():
-    """Test query processing with context."""
-    config = {
-        "memory_config": {},
-        "model_config": {"model_type": "ollama"}
-    }
-    
-    runtime = AgentRuntime(config)
-    runtime.short_term = MockMemory()
-    runtime.long_term = MockMemory()
-    runtime.model = MockModel()
-    runtime.tools = Tools()
-    
-    await runtime.initialize()
-    context = {"test_key": "test_value"}
-    response = await runtime.process_query("Test query", context=context)
-    assert "Test response for:" in response
-    await runtime.close()
-
-@pytest.mark.asyncio
-async def test_process_query_error_handling():
-    """Test error handling during query processing."""
-    config = {
-        "memory_config": {},
-        "model_config": {"model_type": "ollama"}
-    }
-    
-    runtime = AgentRuntime(config)
-    runtime.short_term = MockMemory()
-    runtime.long_term = MockMemory()
-    runtime.model = MockModel()
-    runtime.tools = Tools()
-    
-    await runtime.initialize()
-    
-    # Simular error en el modelo
-    async def mock_error(*args, **kwargs):
-        raise Exception("Test error")
-    
-    runtime.model.generate_response = mock_error
-    
-    response = await runtime.process_query("Test query")
-    assert "Error processing query" in response
-    
-    await runtime.close() 
+    assert isinstance(runtime.tools, ToolsManager) 

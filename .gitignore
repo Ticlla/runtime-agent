@@ -130,4 +130,7 @@ tmp/
 *.env
 .secrets/
 credentials.json
-token.json 
+token.json
+
+# Environment variables
+.env 

@@ -1,7 +1,7 @@
 import pytest
 from ai_agent_framework.core.memory import BaseMemory
 from ai_agent_framework.core.model import BaseModel
-from ai_agent_framework.core.tools import Tools
+from ai_agent_framework.core.tools import ToolsManager
 from ai_agent_framework.core.tools.base_tool import BaseTool
 
 # Configuración global para pytest-asyncio
@@ -44,9 +44,9 @@ async def agent_runtime():
     return AgentRuntime(config)
 
 @pytest.fixture
-def tools_manager():
-    """Fixture that provides a Tools instance."""
-    return Tools()
+def tools():
+    """Provide a test tools manager instance."""
+    return ToolsManager()
 
 @pytest.fixture
 def mock_tool():

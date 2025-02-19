@@ -1,7 +1,7 @@
 from typing import Dict, Any, Optional, List
 from .memory import BaseMemory
 from .model import BaseModel
-from .tools import Tools
+from .tools import ToolsManager
 
 class Agent:
     """Base Agent class that handles interactions and decision making."""
@@ -10,7 +10,7 @@ class Agent:
         self,
         memory: BaseMemory,
         model: BaseModel,
-        tools: Tools,
+        tools: ToolsManager,
         config: Dict[str, Any] = None
     ):
         """

@@ -1,20 +1,14 @@
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from .base_tool import BaseTool
 
 class ToolsManager:
     """Manages the available tools for the agent."""
     
-    def __init__(self, **config):
-        """
-        Initialize tools manager.
-        
-        Args:
-            config: Configuration options for tools
-        """
-        self.config = config
+    def __init__(self):
+        """Initialize tools manager."""
         self.tools: Dict[str, BaseTool] = {}
     
-    def register_tool(self, name: str, tool: BaseTool) -> None:
+    def register(self, name: str, tool: BaseTool) -> None:
         """
         Register a new tool.
         
@@ -24,21 +18,23 @@ class ToolsManager:
         """
         self.tools[name] = tool
     
-    async def execute_tool(self, name: str, **params: Any) -> Any:
+    async def execute_tool(self, tool_name: str, **params: Any) -> Any:
         """
         Execute a tool by name.
         
         Args:
-            name: Tool identifier
+            tool_name: Tool identifier
             params: Tool parameters
             
         Returns:
             Tool execution result
-        """
-        if name not in self.tools:
-            raise ValueError(f"Tool not found: {name}")
             
-        return await self.tools[name].execute(**params)
+        Raises:
+            ValueError: If tool_name is not found
+        """
+        if tool_name not in self.tools:
+            raise ValueError(f"Tool {tool_name} not found")
+        return await self.tools[tool_name].execute(**params)
     
     def get_tools_description(self) -> List[Dict[str, str]]:
         """

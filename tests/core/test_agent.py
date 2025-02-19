@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 from ai_agent_framework.core.agent import Agent
 from ai_agent_framework.core.memory import BaseMemory
 from ai_agent_framework.core.model import BaseModel
-from ai_agent_framework.core.tools import Tools
+from ai_agent_framework.core.tools import ToolsManager
 
 class MockMemory(BaseMemory):
     async def initialize(self): pass
@@ -25,7 +25,7 @@ async def agent():
     """Fixture para pruebas de Agent."""
     memory = MockMemory()
     model = MockModel()
-    tools = Tools()
+    tools = ToolsManager()
     agent = Agent(memory=memory, model=model, tools=tools)
     await agent.initialize()
     yield agent

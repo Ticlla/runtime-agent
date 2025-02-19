@@ -1,5 +1,5 @@
 """Tools system implementation."""
+from .base_tool import BaseTool
+from .tools_manager import ToolsManager
 
-from .tools_manager import ToolsManager as Tools
-
-__all__ = ['Tools'] 
+__all__ = ['BaseTool', 'ToolsManager']
