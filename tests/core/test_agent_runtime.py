@@ -16,10 +16,13 @@ class MockMemory(BaseMemory):
 
 class MockModel(BaseModel):
     """Mock model for testing."""
-    async def generate_response(self, query, context=None):
+    async def generate_response(self, query, context=None, tools=None):
+        """Mock response generation that accepts tools parameter."""
         return f"Test response for: {query}"
+    
     async def get_embedding(self, text):
         return [0.1] * 1536
+    
     async def close(self): pass
 
 @pytest.fixture

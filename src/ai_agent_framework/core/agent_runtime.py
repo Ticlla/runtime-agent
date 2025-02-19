@@ -72,8 +72,18 @@ class AgentRuntime:
             # Combine contexts
             full_context = {**(context or {}), **memory_context}
             
-            # Generate response
-            response = await self.model.generate_response(query, full_context)
+            # Add tools context
+            tools_context = {
+                "available_tools": self.tools.get_tools_description()
+            }
+            full_context.update(tools_context)
+            
+            # Generate response with tool support
+            response = await self.model.generate_response(
+                query, 
+                full_context,
+                tools=self.tools  # Pass tools manager for execution
+            )
             
             # Store interaction
             await memory.store_interaction(
