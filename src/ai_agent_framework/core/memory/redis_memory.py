@@ -1,110 +1,72 @@
 import json
 import time
 from typing import Dict, Any, Optional, List
-import redis.asyncio as aioredis
+import redis.asyncio as redis
 from .base import BaseMemory
 
 class RedisMemory(BaseMemory):
-    """Redis-based memory implementation."""
+    """Redis-based short-term memory."""
     
-    def __init__(
-        self,
-        redis_url: str = "redis://localhost:6379",
-        namespace: str = "agent",
-        ttl: int = 3600  # 1 hour default TTL
-    ):
-        """
-        Initialize Redis memory.
-        
-        Args:
-            redis_url: Redis connection URL
-            namespace: Namespace for Redis keys
-            ttl: Time-to-live for memory entries in seconds
-        """
-        self.redis_url = redis_url
-        self.namespace = namespace
+    def __init__(self, url: str, ttl: int = 3600):
+        """Initialize Redis memory."""
+        self.url = url
         self.ttl = ttl
-        self.redis = None
+        self.client = None
     
     async def initialize(self) -> None:
-        """Initialize Redis connection."""
-        if not self.redis:
-            self.redis = await aioredis.from_url(
-                self.redis_url,
-                encoding="utf-8",
-                decode_responses=True
-            )
+        """Connect to Redis."""
+        self.client = redis.from_url(self.url)
+        await self.client.ping()  # Verify connection
     
     async def store_interaction(
         self,
         query: str,
         response: str,
-        context: Dict[str, Any],
-        embedding: Optional[str] = None
+        context: Dict[str, Any]
     ) -> None:
-        """Store an interaction in Redis."""
-        if not self.redis:
-            await self.initialize()
+        """Store interaction in Redis."""
+        if not self.client:
+            raise RuntimeError("Redis not initialized")
             
         interaction = {
             "query": query,
             "response": response,
             "context": context,
-            "embedding": embedding,
-            "timestamp": time.time()
+            "timestamp": int(time.time())
         }
         
-        # Store in sorted set by timestamp
-        key = f"{self.namespace}:interactions"
-        await self.redis.zadd(
-            key,
-            {json.dumps(interaction): interaction["timestamp"]}
+        # Store in recent interactions list
+        await self.client.lpush(
+            "recent_interactions",
+            json.dumps(interaction)
         )
+        await self.client.ltrim("recent_interactions", 0, 9)  # Keep last 10
         
         # Set TTL
-        await self.redis.expire(key, self.ttl)
+        await self.client.expire("recent_interactions", self.ttl)
     
     async def retrieve_context(
         self,
         query: str,
-        embedding: Optional[str] = None,
         limit: int = 5
     ) -> Dict[str, Any]:
-        """Retrieve recent interactions from Redis."""
-        if not self.redis:
-            await self.initialize()
+        """Retrieve recent interactions as context."""
+        if not self.client:
+            raise RuntimeError("Redis not initialized")
             
-        key = f"{self.namespace}:interactions"
-        
         # Get recent interactions
-        interactions = await self.redis.zrevrange(
-            key,
-            0,
-            limit - 1,
-            withscores=True
-        )
-        
-        # Parse interactions
-        context_data = []
-        for interaction_json, score in interactions:
-            interaction = json.loads(interaction_json)
-            context_data.append(interaction)
+        interactions = await self.client.lrange("recent_interactions", 0, limit - 1)
+        recent = [
+            json.loads(interaction)
+            for interaction in interactions
+        ]
         
         return {
-            "source": "redis",
-            "search_type": "recent",
-            "total_found": len(context_data),
-            "recent_interactions": context_data
+            "recent_interactions": recent,
+            "memory_type": "short_term"
         }
-    
-    async def clear(self) -> None:
-        """Clear all memory entries."""
-        if not self.redis:
-            await self.initialize()
-        await self.redis.delete(f"{self.namespace}:interactions")
     
     async def close(self) -> None:
         """Close Redis connection."""
-        if self.redis:
-            await self.redis.close()
-            await self.redis.connection_pool.disconnect() 
+        if self.client:
+            await self.client.close() 

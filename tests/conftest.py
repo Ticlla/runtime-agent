@@ -9,12 +9,12 @@ pytest_plugins = ('pytest_asyncio',)
 
 class TestMemory(BaseMemory):
     """Memory implementation for testing."""
-    async def initialize(self): pass
-    async def store_interaction(self, query, response, context, embedding): pass
-    async def retrieve_context(self, query, embedding=None, limit=5): 
+    async def store_interaction(self, query, response, context): 
+        pass
+    async def retrieve_context(self, query, limit=5): 
         return {"source": "test", "recent_interactions": []}
-    async def clear(self): pass
-    async def close(self): pass
+    async def clear(self): 
+        pass
 
 @pytest.fixture
 async def memory():
@@ -32,16 +32,6 @@ async def model():
             return [0.1, 0.2, 0.3]
     
     return TestModel()
-
-@pytest.fixture
-async def agent_runtime():
-    """Provide a test agent runtime instance."""
-    config = {
-        "test_mode": True,
-        "model_type": "ollama",
-        "model_config": {}
-    }
-    return AgentRuntime(config)
 
 @pytest.fixture
 def tools():

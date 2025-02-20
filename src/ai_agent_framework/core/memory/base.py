@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, List
 
 class BaseMemory(ABC):
-    """Base class for memory implementations."""
+    """Base class for memory systems."""
     
     @abstractmethod
     async def store_interaction(
@@ -24,6 +24,11 @@ class BaseMemory(ABC):
         pass
     
     @abstractmethod
-    async def clear(self) -> None:
-        """Clear all memory."""
+    async def initialize(self) -> None:
+        """Initialize memory system."""
+        pass
+    
+    @abstractmethod
+    async def close(self) -> None:
+        """Clean up resources."""
         pass 

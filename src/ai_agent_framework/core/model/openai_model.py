@@ -1,37 +1,111 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any, List, Optional
 import openai
 from .base import BaseModel
+from openai import OpenAI
+import json
 
 class OpenAIModel(BaseModel):
-    """OpenAI GPT model implementation."""
+    """OpenAI model implementation."""
     
-    def __init__(self, api_key: str, model: str = "gpt-3.5-turbo"):
-        self.client = openai.AsyncOpenAI(api_key=api_key)
-        self.model = model
+    def __init__(self, config: Dict[str, Any]):
+        """Initialize OpenAI model."""
+        super().__init__(config)
+        self.client = OpenAI(api_key=config["api_key"])
+        self.model = config.get("model", "gpt-3.5-turbo")
+        self.system_prompt = config.get("system_prompt", "You are a helpful assistant.")
+        self.temperature = config.get("temperature", 0.7)
+        self.max_tokens = config.get("max_tokens", 500)
     
     async def generate_response(
-        self,
-        query: str,
-        context: Dict[str, Any],
-        **kwargs: Any
+        self, 
+        query: str, 
+        context: Optional[Dict[str, Any]] = None
     ) -> str:
-        """Generate a response using OpenAI's API."""
+        """Generate response using OpenAI API."""
         try:
-            messages = self._prepare_messages(query, context)
-            response = await self.client.chat.completions.create(
+            print("Preparing OpenAI request...")  # Debug
+            
+            messages = [
+                {"role": "system", "content": self.system_prompt},
+                {"role": "user", "content": query}
+            ]
+            
+            print("Calling OpenAI API...")  # Debug
+            response = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
-                **kwargs
+                temperature=self.temperature,
+                max_tokens=self.max_tokens,
+                response_format={"type": "json_object"}  # Forzar respuesta JSON
             )
-            return response.choices[0].message.content
+            
+            print("Got response from OpenAI")  # Debug
+            
+            # Verificar y parsear la respuesta JSON
+            content = response.choices[0].message.content
+            try:
+                # Intentar parsear como JSON
+                json_response = json.loads(content)
+                return json_response
+            except json.JSONDecodeError:
+                # Si falla, devolver un JSON con el error
+                return {
+                    "error": "invalid_json",
+                    "raw_response": content
+                }
+                
         except Exception as e:
-            # TODO: Implement proper error handling
-            return f"Error generating response: {str(e)}"
+            print(f"OpenAI API Error: {str(e)}")  # Debug
+            return {
+                "error": "api_error",
+                "message": str(e)
+            }
     
-    async def get_embedding(self, text: str) -> list[float]:
+    async def analyze_code(self, code: str, **kwargs) -> Dict:
+        """
+        Analyze code using OpenAI.
+        
+        Args:
+            code: Source code to analyze
+            kwargs: Additional parameters
+            
+        Returns:
+            Dictionary with analysis results
+        """
+        prompt = f"""
+        Please analyze this Python code and provide a detailed review:
+
+        ```python
+        {code}
+        ```
+
+        Focus on:
+        1. Code structure and organization
+        2. Potential bugs and issues
+        3. Style and formatting
+        4. Security concerns
+        5. Performance considerations
+        6. Best practices
+
+        Provide the analysis in JSON format with these sections.
+        """
+        
+        try:
+            response = await self.generate_response(prompt, {})
+            # Convertir la respuesta a diccionario
+            # (Aquí podrías usar json.loads si la respuesta está bien formateada)
+            return {
+                "analysis": response,
+                "model": self.model
+            }
+            
+        except Exception as e:
+            raise RuntimeError(f"Code analysis failed: {str(e)}")
+
+    async def get_embedding(self, text: str) -> List[float]:
         """Get embedding vector using OpenAI's API."""
         try:
-            response = await self.client.embeddings.create(
+            response = self.client.embeddings.create(
                 model="text-embedding-ada-002",
                 input=text
             )
@@ -43,7 +117,7 @@ class OpenAIModel(BaseModel):
         self,
         query: str,
         context: Dict[str, Any]
-    ) -> list[Dict[str, str]]:
+    ) -> List[Dict[str, str]]:
         """Prepare messages for the chat completion API."""
         messages = []
         
@@ -56,4 +130,8 @@ class OpenAIModel(BaseModel):
         # Add current query
         messages.append({"role": "user", "content": query})
         
-        return messages 
+        return messages
+    
+    async def close(self) -> None:
+        """Clean up resources."""
+        pass  # No cleanup needed for OpenAI 

@@ -1,3 +1,7 @@
+# Environment variables
+.env
+.env.*
+
 # Python
 __pycache__/
 *.py[cod]
@@ -19,17 +23,18 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
 
 # Virtual Environment
 venv/
-env/
 ENV/
-.env
-.venv
-.python-version
-.env.local
-.env.*.local
+env/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
 
 # IDE - VSCode
 .vscode/*

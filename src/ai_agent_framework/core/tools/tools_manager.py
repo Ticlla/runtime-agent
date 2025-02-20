@@ -1,52 +1,35 @@
-from typing import Dict, Any, List
-from .base_tool import BaseTool
+from typing import Dict, Any, List, Optional
+from .base import BaseTool
 
 class ToolsManager:
-    """Manages the available tools for the agent."""
+    """Manager for tool registration and execution."""
     
     def __init__(self):
         """Initialize tools manager."""
-        self.tools: Dict[str, BaseTool] = {}
+        self._tools: Dict[str, BaseTool] = {}
     
     def register(self, name: str, tool: BaseTool) -> None:
-        """
-        Register a new tool.
-        
-        Args:
-            name: Tool identifier
-            tool: Tool instance
-        """
-        self.tools[name] = tool
+        """Register a tool."""
+        self._tools[name] = tool
     
-    async def execute_tool(self, tool_name: str, **params: Any) -> Any:
-        """
-        Execute a tool by name.
-        
-        Args:
-            tool_name: Tool identifier
-            params: Tool parameters
-            
-        Returns:
-            Tool execution result
-            
-        Raises:
-            ValueError: If tool_name is not found
-        """
-        if tool_name not in self.tools:
-            raise ValueError(f"Tool {tool_name} not found")
-        return await self.tools[tool_name].execute(**params)
+    def get_tools(self) -> Dict[str, BaseTool]:
+        """Get all registered tools."""
+        return self._tools
     
-    def get_tools_description(self) -> List[Dict[str, str]]:
-        """
-        Get descriptions of all available tools.
-        
-        Returns:
-            List of dicts containing tool names and descriptions
-        """
-        return [
-            {
-                "name": name,
-                "description": tool.get_description()
-            }
-            for name, tool in self.tools.items()
-        ] 
+    def get_tool(self, name: str) -> Optional[BaseTool]:
+        """Get a specific tool by name."""
+        return self._tools.get(name)
+    
+    async def execute_tool(self, name: str, **kwargs) -> Dict[str, Any]:
+        """Execute a tool by name."""
+        tool = self.get_tool(name)
+        if not tool:
+            raise ValueError(f"Tool not found: {name}")
+        return await tool.execute(**kwargs)
+    
+    def get_tools_description(self) -> Dict[str, str]:
+        """Get descriptions of all registered tools."""
+        return {
+            name: tool.get_description() 
+            for name, tool in self._tools.items()
+        } 
