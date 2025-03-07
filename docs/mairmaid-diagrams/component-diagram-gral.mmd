@@ -1,0 +1,20 @@
+graph TD
+    A[AI Agent Framework]
+    A --> B[Core]
+    A --> C[Memory]
+    A --> D[Model]
+    A --> E[Tools]
+    A --> F[Config]
+    A --> G[Testing]
+
+    B --> H[Agent]
+    B --> I[BaseMemory]
+    B --> J[BaseModel]
+    
+    C --> K[PostgresMemory]
+    C --> L[RedisMemory]
+    
+    D --> M[OpenAIModel]
+    D --> N[OllamaModel]
+    
+    E --> O[ToolsManager]

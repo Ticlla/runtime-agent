@@ -66,6 +66,15 @@ class RedisMemory(BaseMemory):
             "memory_type": "short_term"
         }
     
+    async def clear(self) -> None:
+        """Clear all interactions from Redis."""
+        if not self.client:
+            raise RuntimeError("Redis not initialized")
+        
+        # Eliminar solo la clave de interacciones recientes
+        await self.client.delete("recent_interactions")
+        print("✅ Datos de prueba (recent_interactions) limpiados")
+    
     async def close(self) -> None:
         """Close Redis connection."""
         if self.client:

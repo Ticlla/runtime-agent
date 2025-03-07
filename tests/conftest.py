@@ -1,4 +1,6 @@
+import os
 import pytest
+from dotenv import load_dotenv
 from ai_agent_framework.core.memory import BaseMemory
 from ai_agent_framework.core.model import BaseModel
 from ai_agent_framework.core.tools import ToolsManager
@@ -6,6 +8,16 @@ from ai_agent_framework.core.tools.base_tool import BaseTool
 
 # Configuración global para pytest-asyncio
 pytest_plugins = ('pytest_asyncio',)
+
+# Cargar variables de entorno desde .env antes de ejecutar las pruebas
+def pytest_configure(config):
+    # Intentar cargar desde la raíz del proyecto
+    load_dotenv()
+    
+    # Si no se encuentra OPENAI_API_KEY, usar una clave de prueba
+    if not os.getenv("OPENAI_API_KEY"):
+        os.environ["OPENAI_API_KEY"] = "sk-test-key-for-testing-purposes-only"
+        print("WARNING: Using test API key. Tests requiring actual API calls may fail.")
 
 class TestMemory(BaseMemory):
     """Memory implementation for testing."""

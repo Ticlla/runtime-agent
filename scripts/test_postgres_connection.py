@@ -3,6 +3,7 @@ import sys
 import os
 import json
 from datetime import datetime
+from typing import Optional, List, Dict, Any
 
 # Añadir el directorio src al path para poder importar el paquete
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -31,21 +32,21 @@ async def test_postgres_connection():
         print("✅ Base de datos inicializada")
         
         # Probar almacenamiento
-        # Convertir lista a string de array PostgreSQL
-        embedding_str = f"[{','.join(map(str, [0.1] * 1536))}]"
+        # Crear un vector de 1536 dimensiones
+        embedding = [0.1] * 1536  # Crear una lista de 1536 elementos
         
         await memory.store_interaction(
             query="¿Está funcionando PostgreSQL?",
             response="¡Sí, está funcionando!",
             context={"test": True, "timestamp": datetime.now().isoformat()},
-            embedding=embedding_str  # Ahora es un string
+            embedding=embedding  # Pasar la lista directamente
         )
         print("✅ Interacción almacenada correctamente")
         
         # Probar recuperación
         context = await memory.retrieve_context(
             query="test",
-            embedding=embedding_str  # También aquí usamos string
+            embedding=embedding  # También aquí pasamos la lista
         )
         print("\nContexto recuperado:")
         print("-" * 50)
@@ -53,7 +54,7 @@ async def test_postgres_connection():
             print(f"Query: {interaction['query']}")
             print(f"Response: {interaction['response']}")
             print(f"Context: {interaction['context']}")
-            print(f"Timestamp: {datetime.fromtimestamp(interaction['timestamp'])}")
+            print(f"Timestamp: {datetime.fromisoformat(interaction['timestamp'])}")
             print("-" * 50)
         
         # Limpiar datos de prueba

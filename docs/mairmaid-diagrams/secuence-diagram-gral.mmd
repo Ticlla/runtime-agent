@@ -1,0 +1,24 @@
+sequenceDiagram
+    participant User
+    participant Agent
+    participant Model
+    participant Memory
+    participant ToolsManager
+    participant Tool
+
+    User ->> Agent: process_query(query)
+    Agent ->> Model: get_embedding(query)
+    Model -->> Agent: return embedding
+    Agent ->> Memory: retrieve_context(query, embedding)
+    Memory -->> Agent: return context
+    Agent ->> ToolsManager: get_tools()
+    ToolsManager -->> Agent: return tools
+    Agent ->> ToolsManager: execute_tool(tool_name, parameters)
+    ToolsManager -->> Tool: call tool with parameters
+    Tool -->> ToolsManager: return tool result
+    ToolsManager -->> Agent: return tool result
+    Agent ->> Model: generate_response(query, context, tool_result)
+    Model -->> Agent: return response
+    Agent ->> Memory: store_interaction(query, response, context, embedding)
+    Memory -->> Agent: confirm storage
+    Agent -->> User: return response

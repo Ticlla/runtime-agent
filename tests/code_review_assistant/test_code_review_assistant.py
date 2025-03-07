@@ -63,3 +63,13 @@ def problematic_function(data):
     # Verify specific issues are identified
     issues = analysis["issues"]
     assert any(issue["type"] == "bare_except" for issue in issues) 
+
+@pytest.mark.asyncio
+async def test_invalid_input():
+    """Test handling of invalid input."""
+    assistant = CodeReviewAssistant()
+    await assistant.initialize()
+    
+    result = await assistant.review_code({})
+    assert "error" in result
+    assert result["error"] == "invalid_input" 

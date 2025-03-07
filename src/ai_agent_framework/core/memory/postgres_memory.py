@@ -68,8 +68,12 @@ class PostgresMemory(BaseMemory):
         """
         async with self.pool.acquire() as conn:
             try:
-                # Convertir el embedding a formato array de PostgreSQL
-                embedding_str = f"[{','.join(map(str, embedding))}]" if embedding else None
+                # Asegúrate de que el embedding sea una lista de números
+                if embedding is not None:
+                    # Convertir el embedding a formato array de PostgreSQL
+                    embedding_str = f"[{','.join(map(str, embedding))}]"
+                else:
+                    embedding_str = None
                 
                 await conn.execute(
                     f'''
@@ -116,7 +120,7 @@ class PostgresMemory(BaseMemory):
                         query, 
                         response, 
                         context,
-                        timestamp,
+                        created_at,
                         1 - (embedding <-> $1::vector) as similarity
                     FROM {self.table_name}
                     ORDER BY embedding <-> $1::vector
@@ -132,9 +136,9 @@ class PostgresMemory(BaseMemory):
                         query, 
                         response, 
                         context,
-                        timestamp
+                        created_at
                     FROM {self.table_name}
-                    ORDER BY timestamp DESC
+                    ORDER BY created_at DESC
                     LIMIT $1
                     ''',
                     limit
@@ -146,7 +150,7 @@ class PostgresMemory(BaseMemory):
                     "query": row['query'],
                     "response": row['response'],
                     "context": json.loads(row['context']) if row['context'] else {},
-                    "timestamp": row['timestamp'].isoformat()
+                    "timestamp": row['created_at'].isoformat()
                 }
                 if embedding:
                     interaction["similarity"] = float(row['similarity'])

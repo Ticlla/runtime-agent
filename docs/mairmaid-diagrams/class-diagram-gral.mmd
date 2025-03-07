@@ -1,0 +1,64 @@
+classDiagram
+    class Agent {
+        - memory: BaseMemory
+        - model: BaseModel
+        - tools: ToolsManager
+        - config: Dict
+        + initialize()
+        + process_query()
+        + close()
+    }
+
+    class BaseMemory {
+        + store_interaction()
+        + retrieve_context()
+        + initialize()
+        + close()
+    }
+
+    class PostgresMemory {
+        + store_interaction()
+        + retrieve_context()
+        + initialize()
+        + close()
+    }
+
+    class RedisMemory {
+        + store_interaction()
+        + retrieve_context()
+        + initialize()
+        + close()
+    }
+
+    class BaseModel {
+        + generate_response()
+        + get_embedding()
+        + close()
+    }
+
+    class OpenAIModel {
+        + generate_response()
+        + get_embedding()
+        + close()
+    }
+
+    class OllamaModel {
+        + generate_response()
+        + get_embedding()
+        + close()
+    }
+
+    class ToolsManager {
+        + register()
+        + get_tools()
+        + execute_tool()
+        + get_tools_description()
+    }
+
+    Agent --> BaseMemory
+    Agent --> BaseModel
+    Agent --> ToolsManager
+    BaseMemory <|-- PostgresMemory
+    BaseMemory <|-- RedisMemory
+    BaseModel <|-- OpenAIModel
+    BaseModel <|-- OllamaModel

@@ -2,7 +2,7 @@ import os
 import sys
 from pathlib import Path
 
-# Agregar el directorio src al PYTHONPATH
+# Add src directory to PYTHONPATH
 root_dir = Path(__file__).parent.parent
 sys.path.append(str(root_dir / "src"))
 
@@ -15,40 +15,16 @@ from typing import Dict
 
 async def main():
     try:
-        # Cargar variables de entorno desde .env
+        # Load environment variables
         load_dotenv()
         
-        # Obtener API key de variable de entorno
+        # Get API key from environment
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
-            print("Error: OPENAI_API_KEY no está configurada en el archivo .env")
+            print("Error: OPENAI_API_KEY not set in .env file")
             return
         
-        # Configuration
-        config = {
-            "model_config": {
-                "model_type": "openai",
-                "api_key": api_key,
-                "model": "gpt-3.5-turbo",  # Usar gpt-3.5-turbo en lugar de gpt-4
-                "system_prompt": "You are a helpful assistant for code review.",
-                "temperature": 0.7,
-                "max_tokens": 500
-            },
-            # Agregar configuración de memoria
-            "memory_config": {
-                "redis": {
-                    "url": "redis://localhost:6379",
-                    "ttl": 3600
-                }
-            },
-            "review_rules": {
-                "max_line_length": 80,
-                "max_complexity": 10,
-                "style_guide": "pep8"
-            }
-        }
-        
-        # Código de ejemplo para revisar
+        # Example code to review
         code_data = {
             "source_code": """
 def problematic_function(data):
@@ -66,101 +42,75 @@ def problematic_function(data):
             "file_path": "test.py"
         }
         
-        # Inicializar y ejecutar el asistente
-        print("Ejecutando revisión de código...")
+        # Initialize and run assistant
+        print("Starting code review...")
         assistant = CodeReviewAssistant()
         await assistant.initialize()
         
-        # Realizar la revisión
+        # Execute review
         review = await assistant.review_code(code_data)
         
         if review.get("error"):
-            print(f"\nError en la revisión: {review.get('message')}")
+            print(f"\nReview Error: {review.get('message')}")
             return
         
-        # Mostrar resultados
-        print("\n=== Resultados de la Revisión de Código ===\n")
+        # Display results
+        print("\n=== Code Review Results ===\n")
         
-        # Procesamiento de la síntesis
+        # Process synthesis
         if "synthesis" in review:
             try:
                 synthesis = review["synthesis"]
                 if isinstance(synthesis, str):
                     synthesis = json.loads(synthesis)
                 
-                print("📊 Síntesis del Análisis:\n")
+                print("📊 Analysis Summary:\n")
                 
-                # Resumen general
                 if "quality_assessment" in synthesis:
-                    qa = synthesis["quality_assessment"]
-                    print("Evaluación de Calidad:")
-                    for aspect, details in qa.items():
-                        if isinstance(details, dict):
-                            print(f"- {aspect.title()}: {details.get('score', 'N/A')}")
-                            if "details" in details:
-                                print(f"  Detalles: {details['details']}")
-                        else:
-                            print(f"- {aspect.title()}: {details}")
-                    print()
+                    print("Quality Assessment:")
+                    for metric, value in synthesis["quality_assessment"].items():
+                        print(f"- {metric}: {value}")
                 
-                # Problemas críticos
                 if "critical_issues" in synthesis:
-                    print("Problemas Críticos:")
+                    print("\nCritical Issues:")
                     for issue in synthesis["critical_issues"]:
-                        print(f"- {issue.get('description', '')}")
-                        if "impact" in issue:
-                            print(f"  Impacto: {issue['impact']}")
-                        if "solution" in issue:
-                            print(f"  Solución: {issue['solution']}")
-                    print()
+                        print(f"- {issue['description']}")
+                        print(f"  Impact: {issue['impact']}")
+                        print(f"  Solution: {issue['solution']}")
                 
-                # Recomendaciones
                 if "recommendations" in synthesis:
-                    print("Recomendaciones Principales:")
+                    print("\nRecommendations:")
                     for rec in synthesis["recommendations"]:
-                        print(f"- {rec.get('description', '')}")
-                        if "priority" in rec:
-                            print(f"  Prioridad: {rec['priority']}")
-                    print()
-                
-                # Métricas generales
-                if "metrics" in synthesis:
-                    print("Métricas Generales:")
-                    for metric, value in synthesis["metrics"].items():
-                        print(f"- {metric.replace('_', ' ').title()}: {value}")
-                    print()
-                
-            except json.JSONDecodeError as e:
-                print("Error al procesar la síntesis:", str(e))
-            except Exception as e:
-                print("Error inesperado al procesar la síntesis:", str(e))
+                        print(f"- {rec['description']} (Priority: {rec['priority']})")
+            
+            except json.JSONDecodeError:
+                print("Error: Could not parse synthesis results")
         
-        # Luego mostrar los detalles técnicos usando el nuevo formato
-        print("\n=== Detalles Técnicos ===\n")
+        # Technical details
+        print("\n=== Technical Details ===\n")
         
-        # Análisis de código
+        # Code analysis
         if "analysis" in review:
-            print_tool_results("🔍 Análisis de Código", review["analysis"])
+            print_tool_results("🔍 Code Analysis", review["analysis"])
         
-        # Revisión de estilo
+        # Style review
         if "style" in review:
-            print_tool_results("🎨 Revisión de Estilo", review["style"])
+            print_tool_results("🎨 Style Review", review["style"])
         
-        # Análisis de seguridad
+        # Security analysis
         if "security" in review:
-            print_tool_results("🔒 Análisis de Seguridad", review["security"])
+            print_tool_results("🔒 Security Analysis", review["security"])
         
-        # Análisis de rendimiento
+        # Performance analysis
         if "performance" in review:
-            print_tool_results("⚡ Análisis de Rendimiento", review["performance"])
+            print_tool_results("⚡ Performance Analysis", review["performance"])
         
-        # Mejores prácticas
+        # Best practices
         if "best_practices" in review:
-            print_tool_results("✨ Mejores Prácticas", review["best_practices"])
+            print_tool_results("✨ Best Practices", review["best_practices"])
 
     except Exception as e:
-        print(f"\nError inesperado: {str(e)}")
-        # Para debugging
+        print(f"\nUnexpected error: {str(e)}")
         import traceback
         print(traceback.format_exc())
 
@@ -172,7 +122,7 @@ def print_tool_results(tool_name: str, results: Dict):
     print(f"\n{tool_name}")
     print("=" * len(tool_name))
     
-    # Score y Summary
+    # Score and Summary
     if "score" in results:
         print(f"\nScore: {results['score']:.1f}/10")
     if "summary" in results:

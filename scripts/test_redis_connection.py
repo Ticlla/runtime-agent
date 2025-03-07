@@ -14,10 +14,11 @@ async def test_redis_connection():
     try:
         # Crear instancia de RedisMemory
         memory = RedisMemory(
-            redis_url="redis://localhost:6379",
-            namespace="test_connection",
+            url="redis://localhost:6379",  # Usar el argumento 'url' según la definición de la clase
             ttl=3600
         )
+        
+        await memory.initialize()  # Asegúrate de inicializar la conexión
         
         print("✅ Instancia de RedisMemory creada")
         
